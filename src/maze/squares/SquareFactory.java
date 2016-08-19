@@ -6,9 +6,9 @@ public class SquareFactory {
     public static @NotNull Square getSquare(byte inputCharacter) {
         switch (inputCharacter) {
             case 'X':
-                return new Wall();
+                return new MazeSquare(MazeSquare.Type.WALL);
             case ' ':
-                return new Space();
+                return new MazeSquare(MazeSquare.Type.SPACE);
             default:
                 throw new IllegalArgumentException();
         }
