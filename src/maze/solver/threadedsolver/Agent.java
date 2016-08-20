@@ -6,6 +6,7 @@ import maze.squares.Coordinate;
 import maze.squares.Mark;
 import maze.squares.interfaces.Square;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,7 +62,7 @@ public class Agent implements Runnable {
             return currentSquare.getNextGold();
         }
 
-        //Filter dead nodes.
+        //Filter dead nodes. and nodes we came from
         List<Square> viableNeighbours = maze
                 .getNeighbours(currentPosition)
                 .filter(s -> !s.isMarked(Mark.DEAD)) //Ensure that none of the "neighbours" are marked as dead
@@ -120,7 +121,9 @@ public class Agent implements Runnable {
             if(totalAvailable > 1) {
                 for (int a = 1; a < toExplore.size(); a++) {
                     int remaining = threadsAvailable.addAndGet(-splitOffSize);
-                    Agent newAgent = new Agent(maze, splitOffSize, path, toExplore.get(a).getCoordinate());
+                    List<Square> p = new ArrayList<>(path);
+                    p.add(currentSquare);
+                    Agent newAgent = new Agent(maze, splitOffSize, p, toExplore.get(a).getCoordinate());
 
                     new Thread(newAgent).start();
                     if (remaining == 1) {

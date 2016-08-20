@@ -39,6 +39,9 @@ class MazeSquare implements Square {
 
     @Override
     public void mark(Mark type) {
+        if(isMarked(Mark.GOLD)) {
+            return;
+        }
         marks.add(type);
     }
 
