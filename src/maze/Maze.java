@@ -1,14 +1,17 @@
 package maze;
 
+import maze.solver.MazeSolution;
 import maze.squares.Coordinate;
-import maze.squares.Square;
+import maze.squares.Mark;
 import maze.squares.SquareFactory;
+import maze.squares.interfaces.Square;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.stream.Stream;
 
 public class Maze {
 
@@ -23,6 +26,7 @@ public class Maze {
     private void initMaze(File mazeFile) throws FileNotFoundException {
         Scanner mazeInput = new Scanner(mazeFile);
         int size = mazeInput.nextInt();
+
         squares = new Square[size][size];
         entrance = new Coordinate(mazeInput.nextInt(), mazeInput.nextInt());
         int position = 0;
@@ -32,7 +36,9 @@ public class Maze {
                 if (input != ' ' && input != 'X') {
                     continue;
                 }
-                squares[position % size][Math.floorDiv(position, size)] = SquareFactory.getSquare(input);
+                int col = position % size;
+                int row = Math.floorDiv(position, size);
+                squares[col][row] = SquareFactory.getSquare(input, new Coordinate(row, col));
                 position++;
             }
         }
@@ -46,7 +52,7 @@ public class Maze {
             };
             Optional<Square> result = Arrays.stream(edgeSquares).filter(s -> s.isSpace() && s != getEntrance()).findFirst();
             if(result.isPresent()) {
-                exit = getCoordinate(result.get());
+                exit = result.get().getCoordinate();
                 break;
             }
         }
@@ -55,24 +61,32 @@ public class Maze {
         }
     }
 
-    private Coordinate getCoordinate(Square square) {
-        for(int col = 0; col < squares.length;col++) {
-            for(int row = 0; row < squares[col].length;row++) {
-                if(getSquare(row, col) == square) {
-                    return new Coordinate(row, col);
-                }
-            }
-        }
-        throw new RuntimeException("Square not found");
-    }
 
-    @SuppressWarnings("ForLoopReplaceableByForEach")
     @Override
     public String toString() {
+        return toString(null);
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public String toString(MazeSolution solution) {
         StringBuilder build = new StringBuilder("Maze: \n");
         for(int y = 0; y < squares[0].length;y++) {
             for(int x = 0; x < squares.length; x++) {
-                build.append(squares[x][y].isWall() ? " \u2588 " : "   ");
+                //build.append(squares[x][y].isWall() ? " \u2588 " : (solution != null && solution.isCoordinateInPath(new Coordinate(y, x)) ? " X " : "   "));
+                String c;
+                if(getSquare(y, x).isMarked(Mark.DEAD)) {
+                    c = " D ";
+                } else if (getSquare(y, x).isMarked(Mark.GOLD)) {
+                    c = " G ";
+                } else if(getSquare(y, x).isMarked(Mark.LIVE)) {
+                    c = " L ";
+                } else {
+                    c = "   ";
+                }
+                if(solution != null && solution.isCoordinateInPath(new Coordinate(y, x))) {
+                    c = " X ";
+                }
+                build.append(squares[x][y].isWall() ? " \u2588 " : c);
             }
             build.append('\n');
         }
@@ -81,16 +95,18 @@ public class Maze {
         return build.toString();
     }
 
-    public Square getSquare(int row, int col) {
-        if(row >= squares.length || col >= squares[0].length || row < 0 || col < 0) {
-            throw new IllegalArgumentException();
+
+
+    private Square getSquare(int row, int col) {
+        if(!validCoordinate(row, col)) {
+            return null;
         }
         return squares[col][row];
     }
 
     public Square getSquare(Coordinate c) {
         if(c == null) {
-            throw new IllegalArgumentException();
+            return null;
         }
         return getSquare(c.getRow(), c.getColumn());
     }
@@ -101,5 +117,27 @@ public class Maze {
 
     public boolean isExit(Square square) {
         return(square == getSquare(exit));
+    }
+
+    public Square getExit() {
+        return getSquare(exit);
+    }
+
+    public Stream<Square> getNeighbours(Coordinate position) {
+        Square[] neighbours = new Square[] {
+                getSquare(position.east()),
+                getSquare(position.south()),
+                getSquare(position.north()),
+                getSquare(position.west())
+        };
+        return Arrays.stream(neighbours).filter(s -> s != null && s.isSpace());
+    }
+
+    public boolean validCoordinate(Coordinate c) {
+        return validCoordinate(c.getRow(), c.getColumn());
+    }
+
+    public boolean validCoordinate(int row, int col) {
+        return !(row >= squares.length || col >= squares[0].length || row < 0 || col < 0);
     }
 }

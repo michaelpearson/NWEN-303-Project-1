@@ -11,7 +11,7 @@ public class MazeSolverProject {
         Maze maze = new Maze(new File(argv[0]));
         System.out.print(maze);
         MazeSolution solution = SolverFactory.getSolver(maze, Integer.valueOf(argv[1])).solveMaze();
-        System.out.print(solution);
+        System.out.print(maze.toString(solution));
     }
 
 }
