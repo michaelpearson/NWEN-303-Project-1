@@ -7,6 +7,7 @@ import maze.squares.Mark;
 import maze.squares.interfaces.Square;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -18,7 +19,7 @@ public class Agent implements Runnable {
     private final LinkedList<Square> path = new LinkedList<>();
     private Coordinate currentPosition;
 
-    private static final List<Thread> threads = new LinkedList<>();
+    private static final List<Thread> threads = Collections.synchronizedList(new ArrayList<>());
 
     public Agent(Maze maze, int threadsAvailable, List<Square> previousPath, Coordinate startingPosition) {
         this.maze = maze;
@@ -31,22 +32,20 @@ public class Agent implements Runnable {
 
     @Override
     public void run() {
-        threads.add(Thread.currentThread());
-        if(!moveAndMark(currentPosition)) {
-            return;
-        }
-        while(true) {
-            Square nextSquare = getNextSquare();
-            if(!moveAndMark(nextSquare.getCoordinate())) {
-                return;
-            }
-            if(maze.isExit(nextSquare)) {
-                //Go back and mark squares as gold
-                for(int a = 0;a < path.size(); a++) {
-                    path.get(a).setNextGold(a == path.size() - 1 ? maze.getSquare(currentPosition) : path.get(a + 1));
-                    path.get(a).mark(Mark.GOLD);
+        if(moveAndMark(currentPosition)) {
+            while (true) {
+                Square nextSquare = getNextSquare();
+                if (!moveAndMark(nextSquare.getCoordinate())) {
+                    break;
                 }
-                return;
+                if (maze.isExit(nextSquare)) {
+                    //Go back and mark squares as gold
+                    for (int a = 0; a < path.size(); a++) {
+                        path.get(a).setNextGold(a == path.size() - 1 ? maze.getSquare(currentPosition) : path.get(a + 1));
+                        path.get(a).mark(Mark.GOLD);
+                    }
+                    break;
+                }
             }
         }
     }
@@ -72,6 +71,9 @@ public class Agent implements Runnable {
         //Only way we can go is to follow our previous path.
         if(viableNeighbours.size() == 0) {
             currentSquare.mark(Mark.DEAD);
+            if(path.size() == 0) {
+                return currentSquare;
+            }
             return path.getLast();
         }
 
@@ -118,19 +120,19 @@ public class Agent implements Runnable {
                 splitOffSize = 1;
             }
 
-            if(totalAvailable > 1) {
-                for (int a = 1; a < toExplore.size(); a++) {
-                    int remaining = threadsAvailable.addAndGet(-splitOffSize);
-                    List<Square> p = new ArrayList<>(path);
-                    p.add(currentSquare);
-                    Agent newAgent = new Agent(maze, splitOffSize, p, toExplore.get(a).getCoordinate());
-
-                    new Thread(newAgent).start();
-                    if (remaining == 1) {
-                        break;
-                    }
+            for (int a = 1; a < toExplore.size(); a++) {
+                int remaining = threadsAvailable.addAndGet(-splitOffSize);
+                List<Square> p = new ArrayList<>(path);
+                p.add(currentSquare);
+                Agent newAgent = new Agent(maze, splitOffSize, p, toExplore.get(a).getCoordinate());
+                Thread t = new Thread(newAgent);
+                threads.add(t);
+                t.start();
+                if (remaining == 1) {
+                    break;
                 }
             }
+            assert(threadsAvailable.get() >= 1);
             return toExplore.get(0);
         }
     }
@@ -174,6 +176,13 @@ public class Agent implements Runnable {
         }
         //Update our current position to reflect our actual new position.
         currentPosition = newSquare.getCoordinate();
+
+        try {
+            Thread.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         return true;
     }
 

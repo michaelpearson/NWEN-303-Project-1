@@ -69,7 +69,7 @@ public class Maze {
 
     @SuppressWarnings("ConstantConditions")
     public String toString(MazeSolution solution) {
-        StringBuilder build = new StringBuilder("Maze: \n");
+        StringBuilder build = new StringBuilder("Generator: \n");
         for(int y = 0; y < squares[0].length;y++) {
             for(int x = 0; x < squares.length; x++) {
                 //build.append(squares[x][y].isWall() ? " \u2588 " : (solution != null && solution.isCoordinateInPath(new Coordinate(y, x)) ? " X " : "   "));
@@ -84,7 +84,7 @@ public class Maze {
                     c = "   ";
                 }
                 if(solution != null && solution.isCoordinateInPath(new Coordinate(y, x))) {
-                    c = " X ";
+                    c = " \u2022 ";
                 }
                 build.append(squares[x][y].isWall() ? " \u2588 " : c);
             }

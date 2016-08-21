@@ -17,18 +17,20 @@ class ThreadedMazeSolver implements MazeSolver {
     @Override
     public MazeSolution solveMaze() throws InterruptedException {
         Agent initialAgent = new Agent(maze, maxNumberOfThreads, null, maze.getEntrance().getCoordinate());
-
         Thread initialThread = new Thread(initialAgent);
         initialThread.start();
-
         initialThread.join();
 
         for(int a = 0;a < Agent.getAllThreads().size();a++) {
+
             Agent.getAllThreads().get(a).join();
         }
-
         Agent exitAgent = (Agent)maze.getExit().setVisitor(null);
-        System.out.println(exitAgent.getGroupSize());
+        if(exitAgent.getGroupSize() != maxNumberOfThreads) {
+            System.out.println(maxNumberOfThreads);
+            System.out.println(exitAgent.getGroupSize());
+            throw new RuntimeException("Not everyone made it");
+        }
 
         return exitAgent.getSolution();
     }

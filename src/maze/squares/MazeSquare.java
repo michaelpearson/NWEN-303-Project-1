@@ -4,12 +4,13 @@ import maze.squares.interfaces.Square;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 class MazeSquare implements Square {
 
     private Type squareType;
     private Set<Mark> marks = ConcurrentHashMap.newKeySet();
-    private Object visitor = null;
+    private final AtomicReference<Object> visitor = new AtomicReference<>(null);
     private final Coordinate coordinate;
     private Square nextGold = null;
 
@@ -51,17 +52,22 @@ class MazeSquare implements Square {
     }
 
     @Override
-    public synchronized Object setVisitor(Object o) {
-        if(visitor != null) {
-            return visitor;
+    public Object setVisitor(Object o) {
+        synchronized (visitor) {
+            Object obj = visitor.get();
+            if (visitor.compareAndSet(null, o)) {
+                return o;
+            } else {
+                return obj;
+            }
         }
-        visitor = o;
-        return visitor;
     }
 
     @Override
-    public synchronized void removeVisitor() {
-        visitor = null;
+    public void removeVisitor() {
+        synchronized (visitor) {
+            visitor.set(null);
+        }
     }
 
     @Override
